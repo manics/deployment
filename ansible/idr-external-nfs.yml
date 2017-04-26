@@ -1,5 +1,7 @@
 # Self-contained Ansible playbook for setting up the Embassy IDR NFS shares
 - hosts: >
+    {{ idr_environment | default('idr') }}-uod-nfs
+    {{ idr_environment | default('idr') }}-a-uod-nfs
     {{ idr_environment | default('idr') }}-ebi-nfs
     {{ idr_environment | default('idr') }}-a-ebi-nfs
 
@@ -8,26 +10,28 @@
   - name: Create NFS group
     become: yes
     group:
-      gid: 1030
-      name: idrnfs
+      gid: "{{ idr_nfs.groupid | default(omit) }}"
+      name: "{{ idr_nfs.groupname }}"
       state: present
+    when: 'idr_nfs.groupname is defined'
 
   - name: Create NFS user
     become: yes
     user:
-      group: idrnfs
-      name: idrnfs
+      group: "{{ idr_nfs.groupname | default(omit) }}"
+      name: "{{ idr_nfs.username }}"
       state: present
-      uid: 6166
+      uid: "{{ idr_nfs.userid | default(omit) }}"
+    when: 'idr_nfs.username is defined'
 
   - name: Mount NFS share
     become: yes
     mount:
       fstype: nfs
-      name: "{{ nfs_mountpoint }}"
+      name: "{{ idr_nfs.mountpoint }}"
       # Removed rsize=8192,wsize=8192, this should be auto-negotiated
-      opts: timeo=14,intr,nolock
-      src: 10.35.106.250:/ivol_bioimage_sm
+      opts: "{{ idr_nfs.mountopts | default(omit) }}"
+      src: "{{ idr_nfs.server }}"
       state: mounted
 
   - name: Create filesets parent dir
@@ -52,6 +56,13 @@
 
 
   vars:
-    nfs_mountpoint: /nfs/bioimage
+    idr_nfs:
+      groupid: 1030
+      groupname: idrnfs
+      userid: 6166
+      username: idrnfs
+      server: 10.35.106.250:/ivol_bioimage_sm
+      mountpoint: /nfs/bioimage
+      mountopts: timeo=14,intr,nolock
     nfs_filesets_dir: /nfs/bioimage/drop/complete
     local_filesets_sym: /uod/idr/filesets
