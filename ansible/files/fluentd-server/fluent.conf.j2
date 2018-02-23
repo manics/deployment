@@ -91,7 +91,7 @@
     @type record_transformer
     enable_ruby true
     <record>
-      message ${record.to_json}
+      message ${record.sort.to_json}
     </record>
   </filter>
   <filter nginx.error>
